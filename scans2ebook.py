@@ -33,21 +33,21 @@ def postProcessImages():
 				if int(dimensions[0]) > int(dimensions[1]):
 					# Landscape => split the image into two images
 					print ' croping because '+dimensions[0]+'>'+dimensions[1]
-					os.system('convert -crop 50%x100% ' + fullname + ' '+root+'/x' + os.path.splitext(name)[0] + '%d' + os.path.splitext(name)[1]) 
+					os.system('convert -crop 50%x100% \"' + fullname + '\" \"'+root+'/x' + os.path.splitext(name)[0] + '%d' + os.path.splitext(name)[1]+'\"') 
 					# trim the images (and reverse order)
-					os.system('convert -trim -fuzz 10% '+root+'/x' + os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1] + ' '+root+'/' + os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1])
-					os.system('convert -trim -fuzz 10% '+root+'/x' + os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1] + ' '+root+'/' + os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
+					os.system('convert -trim -fuzz 10% \"'+root+'/x' + os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1] + '\" \"'+root+'/' + os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1]+'\"')
+					os.system('convert -trim -fuzz 10% \"'+root+'/x' + os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1] + '\" \"'+root+'/' + os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1]+'\"')
 					# remove originals
 					os.remove(root+'/x' + os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
 					os.remove(root+'/x' + os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1])
 				else:
 					print ' no croping because '+dimensions[0]+'<'+dimensions[1]+', trim'
 					# Trim the image
-					os.system('convert -trim -fuzz 10% ' + fullname + ' '+root+'/' + os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
+					os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"'+root+'/'+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 			else:
 				print ' trim'
 				# Trim the image
-				os.system('convert -trim -fuzz 10% '+fullname+' '+root+'/'+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1])
+				os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"'+root+'/'+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 				os.remove(fullname)
 				os.rename(root+'/'+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1], fullname)
 
