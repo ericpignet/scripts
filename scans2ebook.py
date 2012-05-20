@@ -6,6 +6,8 @@
 # TODO
 # - temporary files should be in /tmp
 # - autodetect need to split: if more than 50% images are landscape
+# - make it site-agnostic (would work with set of URLs and ask for volume information)
+# - from volume to volume
 
 import os
 import shlex, subprocess
@@ -13,6 +15,7 @@ import argparse
 import urllib2
 from bs4 import BeautifulSoup
 import shutil
+import re
 
 def postProcessImages():
 	for root, dirs, files in os.walk('./'):
@@ -60,6 +63,8 @@ parser = argparse.ArgumentParser(description='Process manga scans.')
 parser.add_argument('manga', help='name of the manga to download')
 parser.add_argument('-s', '--split', action='store_const', const='y', help='split the horizontal images into two vertical images')
 parser.add_argument('-t', '--trim', action='store_const', const='y', help='trim white space around pages')
+parser.add_argument('--from', action='store', dest='volfrom', help='number of first volume to download')
+parser.add_argument('--to', action='store', dest='volto', help='number of last volume to download')
 
 args = parser.parse_args()
 #parser.print_help()
@@ -77,6 +82,12 @@ volumes = {}
 for link in soup.find_all('a'):
 	if link.get('class') is not None and 'tips' in link.get('class'):
 		href = link.get('href').split('/')
+		if args.volfrom <> None or args.volto <> None:
+			volnumber = int(re.search('\d+', href[5]).group(0))
+			if args.volfrom <> None and volnumber < int(args.volfrom):
+				continue
+			if args.volto <> None and volnumber > int(args.volto):
+				continue
 		if href[5] not in volumes:
 			volumes[href[5]] = []
 		volumes[href[5]].append([href[6], link.get('href')])
@@ -97,6 +108,7 @@ for volumename, chapters in volumes.iteritems():
 		print('Downloading')
 		os.system('galleroob download '+chapter[1])
 	postProcessImages()
+	print('Compress in '+manga+' '+volumename+'.cbz')
 	shutil.make_archive('../'+manga+' '+volumename, 'zip')
 	os.chdir('..')
 	os.rename(manga+' '+volumename+'.zip', manga+' '+volumename+'.cbz')
