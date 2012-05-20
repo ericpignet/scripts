@@ -4,11 +4,12 @@
 # Author: Eric Pignet
 # 16/05/2012
 # TODO
-# - temporary files should be in /tmp
 # - autodetect need to split: if more than 50% images are landscape
 # - make it site-agnostic (would work with set of URLs and ask for volume information)
 # - 2 independant phases: download and processing/packaging
 # - change name of output directory to support parall runs in same directory
+# - use weboob python module => download image by image?
+# - display useful output, including progress bar for download
 
 import os
 import shlex, subprocess
@@ -116,19 +117,19 @@ for volumename, chapters in volumes.iteritems():
 	os.chdir(manga+' '+volumename+'/')
 	incomplete = False
 	for chapter in chapters:
-		print('Downloading')
-		weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]))
-		if weboob_output.find('Couldn\'t get page') >= 0:
+		print('Downloading volume '+volumename+', chapter '+chapter[0])
+		weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]), stderr=subprocess.STDOUT)
+		if 'Couldn\'t get page' in weboob_output:
 			#retry 1st time
 			print('Error, first retry')
 			os.system('rm -rf \"'+manga+' '+volumename+' '+chapter[0]+'\"')
-			weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]))
-			if weboob_output.find('Couldn\'t get page') >= 0:
+			weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]), stderr=subprocess.STDOUT)
+			if 'Couldn\'t get page' in weboob_output:
 				#retry 2nd time
 				print('Error, second retry')
 				os.system('rm -rf \"'+manga+' '+volumename+' '+chapter[0]+'\"')
-				weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]))
-				if weboob_output.find('Couldn\'t get page') >= 0:
+				weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]), stderr=subprocess.STDOUT)
+				if 'Couldn\'t get page' in weboob_output:
 					summary = summary + '\nVolume '+volumename+' could not be downloaded'
 					incomplete = True
 					break
