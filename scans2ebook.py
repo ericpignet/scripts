@@ -1,6 +1,8 @@
 #! /usr/bin/python
 
 # scans2ebook.py
+# Process manga scans. By default, download the manga scans, split the horizontal pages, trim the white margins, create .cbz files, and remove the downloaded scans.
+#
 # Author: Eric Pignet
 # 16/05/2012
 # TODO
@@ -8,7 +10,6 @@
 # - 2 independant phases: download and processing/packaging
 # - change name of output directory to support parall runs in same directory
 # - use weboob python module => download image by image?
-# - display useful output, including progress bar for download
 
 import os
 import shlex, subprocess
@@ -20,7 +21,7 @@ import re
 import sys	# for sys.stdout.write
 
 def postProcessImages(volume):
-	os.system('rm -rf ../output')
+	shutil.rmtree('../output')
 	os.makedirs('../output')
 	for root, dirs, files in os.walk('./'):
 		if args.debug:
@@ -156,17 +157,20 @@ for volumename, chapters in volumes.iteritems():
 	incomplete = False
 	for chapter in chapters:
 		print('Downloading volume '+volumename+', chapter '+chapter[0])
-		weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]), stderr=subprocess.STDOUT)
+		p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
+		(out, weboob_output) = p.communicate()
 		if 'Couldn\'t get page' in weboob_output:
 			#retry 1st time
 			print('Error, first retry')
-			os.system('rm -rf \"'+manga+' '+volumename+' '+chapter[0]+'\"')
-			weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]), stderr=subprocess.STDOUT)
+			shutil.rmtree(manga+' '+volumename+' '+chapter[0])
+			p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
+			(out, weboob_output) = p.communicate()
 			if 'Couldn\'t get page' in weboob_output:
 				#retry 2nd time
 				print('Error, second retry')
-				os.system('rm -rf \"'+manga+' '+volumename+' '+chapter[0]+'\"')
-				weboob_output = subprocess.check_output(shlex.split('galleroob download '+chapter[1]), stderr=subprocess.STDOUT)
+				shutil.rmtree(manga+' '+volumename+' '+chapter[0])
+				p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
+				(out, weboob_output) = p.communicate()
 				if 'Couldn\'t get page' in weboob_output:
 					summary = summary + '\nVolume '+volumename+' could not be downloaded'
 					incomplete = True
