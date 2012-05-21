@@ -4,7 +4,6 @@
 # Author: Eric Pignet
 # 16/05/2012
 # TODO
-# - autodetect need to split: if more than 50% images are landscape
 # - make it site-agnostic (would work with set of URLs and ask for volume information)
 # - 2 independant phases: download and processing/packaging
 # - change name of output directory to support parall runs in same directory
@@ -18,45 +17,81 @@ import urllib2
 from bs4 import BeautifulSoup
 import shutil
 import re
+import sys	# for sys.stdout.write
 
 def postProcessImages(volume):
 	os.system('rm -rf ../output')
 	os.makedirs('../output')
 	for root, dirs, files in os.walk('./'):
-		print dirs
-		print files
+		if args.debug:
+			print dirs
+			print files
 		if len(root.split(' ')) ==3:
 			chapter = root.split(' ')[2]+'_'
 			print('Chapter: '+chapter)
-		#os.makedirs('../output/'+root)
+		else:
+			continue
+
+		# Auto-detect default format for this chapter
+		split = False
+		if args.split == 'auto':
+			nb_horizontal = 0
+			nb_vertical = 0
+			for name in files:
+				fullname = root + '/' + name
+			        if name.endswith((".jpg", ".png", ".jpeg")):
+					dimensions = subprocess.check_output(shlex.split('identify -format \'%wx%h\' \"'+fullname+'\"')).split('x')
+					if int(dimensions[0]) > int(dimensions[1]):
+						nb_horizontal += 1
+					else:
+						nb_vertical += 1
+			if nb_horizontal > ( 2 * nb_vertical):
+				print('Auto-detection: split needed')
+				split = True
+			else:
+				print('Auto-detection: split not needed')
+		elif args.split == 'y':
+			split = True
+
+		# Process images	
 		for name in files:
 			fullname = root + '/' + name
 		        if name.endswith((".jpg", ".png", ".jpeg")):
 
 				# For each image
-				print ('Processing: ' + fullname)
+				sys.stdout.write('Processing: ' + fullname)
 	
 				# Is the image in landscape format?
-				if args.split == 'y':
+				if split:
 					dimensions = subprocess.check_output(shlex.split('identify -format \'%wx%h\' \"'+fullname+'\"')).split('x')
-					if int(dimensions[0]) > int(dimensions[1]):
+					if int(dimensions[0]) > int(dimensions[1].rstrip()):
 						# Landscape => split the image into two images
-						print ' croping because '+dimensions[0]+'>'+dimensions[1]
+						sys.stdout.write(' [split because '+dimensions[0]+'>'+dimensions[1].rstrip()+']')
 						os.system('convert -crop 50%x100% \"'+fullname+'\" \"../output/x'+chapter+os.path.splitext(name)[0]+'%d'+os.path.splitext(name)[1]+'\"') 
-						# trim the images (and reverse order)
-						os.system('convert -trim -fuzz 10% \"../output/x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\"')
-						os.system('convert -trim -fuzz 10% \"../output/x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
+
+						if args.notrim == 'y':
+							# reverse order
+							sys.stdout.write('\n')
+							os.rename('../output/x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1], '../output/'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1])
+							os.rename('../output/x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1], '../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1])
+						else:
+							# trim the images (and reverse order)
+							sys.stdout.write(' [trim]\n')
+							os.system('convert -trim -fuzz 10% \"../output/x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"../output/x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
+
 						# remove originals
 						os.remove('../output/x'+chapter+os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
 						os.remove('../output/x'+chapter+os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1])
 					else:
-						print ' no croping because '+dimensions[0]+'<'+dimensions[1]+', trim'
-						if args.trim == 'y':
+						sys.stdout.write(' [no split because '+dimensions[0]+'<'+dimensions[1].rstrip()+']')
+						if args.notrim <> 'y':
 							# Trim the image
+							sys.stdout.write(' [trim]\n')
 							os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 				else:
-					if args.trim == 'y':
-						print ' trim'
+					if args.notrim <> 'y':
+						sys.stdout.write(' [trim]\n')
 						# Trim the image
 						os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+name+'\"')
 					else:
@@ -67,15 +102,16 @@ def postProcessImages(volume):
 # Handle arguments
 ################################
 
-parser = argparse.ArgumentParser(description='Process manga scans.')
+parser = argparse.ArgumentParser(prog='scans2ebook', description='Process manga scans. By default, %(prog)s will download the manga scans, split the horizontal pages, trim the white margins, create .cbz files, and remove the downloaded scans.')
 parser.add_argument('manga', help='name of the manga to download')
-parser.add_argument('-nd', '--no-download', action='store_true', help='skip the download phase, assumes files are already here')
-parser.add_argument('-np', '--no-processing', action='store_true', help='skip the processing phase, download scans only')
-parser.add_argument('-s', '--split', action='store_const', const='y', help='split the horizontal images into two vertical images')
-parser.add_argument('-t', '--trim', action='store_const', const='y', help='trim white space around pages')
-parser.add_argument('-k', '--keep', action='store_const', const='y', help='don\'t remove original downloaded files')
+#parser.add_argument('-nd', '--no-download', action='store_true', help='skip the download phase, assumes files are already here')
+#parser.add_argument('-np', '--no-processing', action='store_true', help='skip the processing phase, download scans only')
+parser.add_argument('--split', choices=['auto','y','n'], action='store', default='auto', help='split the horizontal images into two vertical images (default: %(default)s)')
+parser.add_argument('--no-trim', action='store_const', dest='notrim', const='y', help='trim white space around pages')
+#parser.add_argument('-k', '--keep', action='store_const', const='y', help='don\'t remove original downloaded files')
 parser.add_argument('--from', action='store', dest='volfrom', help='number of first volume to download')
 parser.add_argument('--to', action='store', dest='volto', help='number of last volume to download')
+parser.add_argument('--debug', action='store_true', help='display debug information')
 
 args = parser.parse_args()
 #print args
@@ -103,7 +139,8 @@ for link in soup.find_all('a'):
 			volumes[href[5]] = []
 		volumes[href[5]].append([href[6], link.get('href')])
 		manga = href[4]
-print(volumes)
+if args.debug:
+	print(volumes)
 
 #os.makedirs('../output')
 
