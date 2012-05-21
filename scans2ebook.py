@@ -96,7 +96,8 @@ def postProcessImages(volume):
 						os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+name+'\"')
 					else:
 						shutil.copyfile(fullname, '../output/'+chapter+name)
-
+		if not args.keep:
+			shutil.rmtree(root)
 
 ################################
 # Handle arguments
@@ -108,7 +109,7 @@ parser.add_argument('manga', help='name of the manga to download')
 #parser.add_argument('-np', '--no-processing', action='store_true', help='skip the processing phase, download scans only')
 parser.add_argument('--split', choices=['auto','y','n'], action='store', default='auto', help='split the horizontal images into two vertical images (default: %(default)s)')
 parser.add_argument('--no-trim', action='store_const', dest='notrim', const='y', help='trim white space around pages')
-#parser.add_argument('-k', '--keep', action='store_const', const='y', help='don\'t remove original downloaded files')
+parser.add_argument('-k', '--keep', action='store_true', help='don\'t remove original downloaded files')
 parser.add_argument('--from', action='store', dest='volfrom', help='number of first volume to download')
 parser.add_argument('--to', action='store', dest='volto', help='number of last volume to download')
 parser.add_argument('--debug', action='store_true', help='display debug information')
@@ -177,5 +178,7 @@ for volumename, chapters in volumes.iteritems():
 	os.chdir('../output')
 	shutil.make_archive('../'+manga+' '+volumename, 'zip')
 	os.chdir('..')
+	if not args.keep:
+		shutil.rmtree(manga+' '+volumename)
 	os.rename(manga+' '+volumename+'.zip', manga+' '+volumename+'.cbz')
 print(summary)
