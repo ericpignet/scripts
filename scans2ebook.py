@@ -19,10 +19,11 @@ from bs4 import BeautifulSoup
 import shutil
 import re
 import sys	# for sys.stdout.write
+import random
 
 def postProcessImages(volume):
-	shutil.rmtree('../output')
-	os.makedirs('../output')
+	shutil.rmtree(outputdir)
+	os.makedirs(outputdir)
 	for root, dirs, files in os.walk('./'):
 		if args.debug:
 			print dirs
@@ -68,35 +69,35 @@ def postProcessImages(volume):
 					if int(dimensions[0]) > int(dimensions[1].rstrip()):
 						# Landscape => split the image into two images
 						sys.stdout.write(' [split because '+dimensions[0]+'>'+dimensions[1].rstrip()+']')
-						os.system('convert -crop 50%x100% \"'+fullname+'\" \"../output/x'+chapter+os.path.splitext(name)[0]+'%d'+os.path.splitext(name)[1]+'\"') 
+						os.system('convert -crop 50%x100% \"'+fullname+'\" \"'+outputdir+'x'+chapter+os.path.splitext(name)[0]+'%d'+os.path.splitext(name)[1]+'\"') 
 
 						if not args.trim:
 							# reverse order
 							sys.stdout.write('\n')
-							os.rename('../output/x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1], '../output/'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1])
-							os.rename('../output/x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1], '../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1])
+							os.rename(outputdir+'x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1], outputdir+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1])
+							os.rename(outputdir+'x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1], outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1])
 						else:
 							# trim the images (and reverse order)
 							sys.stdout.write(' [trim]\n')
-							os.system('convert -trim -fuzz 10% \"../output/x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\"')
-							os.system('convert -trim -fuzz 10% \"../output/x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"'+outputdir+'x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\" \"'+outputdir+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"'+outputdir+'x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\" \"'+outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 
 						# remove originals
-						os.remove('../output/x'+chapter+os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
-						os.remove('../output/x'+chapter+os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1])
+						os.remove(outputdir+'x'+chapter+os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
+						os.remove(outputdir+'x'+chapter+os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1])
 					else:
 						sys.stdout.write(' [no split because '+dimensions[0]+'<'+dimensions[1].rstrip()+']')
 						if args.trim:
 							# Trim the image
 							sys.stdout.write(' [trim]\n')
-							os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"'+outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 				else:
 					if args.trim:
 						sys.stdout.write(' [trim]\n')
 						# Trim the image
-						os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+name+'\"')
+						os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"'+outputdir+chapter+name+'\"')
 					else:
-						shutil.copyfile(fullname, '../output/'+chapter+name)
+						shutil.copyfile(fullname, outputdir+chapter+name)
 		if not args.keep:
 			shutil.rmtree(root)
 
@@ -146,6 +147,7 @@ if args.debug:
 	print(volumes)
 
 #os.makedirs('../output')
+outputdir = '../output_'+manga+'_'+str(random.randint(0, 99999))+'/'
 
 ################################
 # Download each volume/chapter
@@ -179,7 +181,7 @@ for volumename, chapters in volumes.iteritems():
 		continue
 	postProcessImages(volumename)
 	print('Compress in '+manga+' '+volumename+'.cbz')
-	os.chdir('../output')
+	os.chdir(outputdir)
 	shutil.make_archive('../'+manga+' '+volumename, 'zip')
 	os.chdir('..')
 	if not args.keep:
