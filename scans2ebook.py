@@ -70,7 +70,7 @@ def postProcessImages(volume):
 						sys.stdout.write(' [split because '+dimensions[0]+'>'+dimensions[1].rstrip()+']')
 						os.system('convert -crop 50%x100% \"'+fullname+'\" \"../output/x'+chapter+os.path.splitext(name)[0]+'%d'+os.path.splitext(name)[1]+'\"') 
 
-						if args.notrim == 'y':
+						if not args.trim:
 							# reverse order
 							sys.stdout.write('\n')
 							os.rename('../output/x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1], '../output/'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1])
@@ -86,12 +86,12 @@ def postProcessImages(volume):
 						os.remove('../output/x'+chapter+os.path.splitext(name)[0] + '1' + os.path.splitext(name)[1])
 					else:
 						sys.stdout.write(' [no split because '+dimensions[0]+'<'+dimensions[1].rstrip()+']')
-						if args.notrim <> 'y':
+						if args.trim:
 							# Trim the image
 							sys.stdout.write(' [trim]\n')
 							os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 				else:
-					if args.notrim <> 'y':
+					if args.trim:
 						sys.stdout.write(' [trim]\n')
 						# Trim the image
 						os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"../output/'+chapter+name+'\"')
@@ -108,11 +108,12 @@ parser = argparse.ArgumentParser(prog='scans2ebook', description='Process manga 
 parser.add_argument('manga', help='name of the manga to download')
 #parser.add_argument('-nd', '--no-download', action='store_true', help='skip the download phase, assumes files are already here')
 #parser.add_argument('-np', '--no-processing', action='store_true', help='skip the processing phase, download scans only')
-parser.add_argument('--split', choices=['auto','y','n'], action='store', default='auto', help='split the horizontal images into two vertical images (default: %(default)s)')
-parser.add_argument('--no-trim', action='store_const', dest='notrim', const='y', help='trim white space around pages')
-parser.add_argument('-k', '--keep', action='store_true', help='don\'t remove original downloaded files')
 parser.add_argument('--from', action='store', dest='volfrom', help='number of first volume to download')
 parser.add_argument('--to', action='store', dest='volto', help='number of last volume to download')
+parser.add_argument('--split', choices=['auto','y','n'], action='store', default='auto', help='split the horizontal images into two vertical images (default: %(default)s)')
+parser.add_argument('--no-trim', action='store_false', dest='trim', help='do\'nt trim white space around pages')
+parser.add_argument('-k', '--keep', action='store_true', help='don\'t remove original downloaded files')
+parser.add_argument('--max-retry', action='store', dest='maxretry', default='3', help='max number of retries in case of download failure (default: %(default)s)')
 parser.add_argument('--debug', action='store_true', help='display debug information')
 
 args = parser.parse_args()
@@ -154,28 +155,27 @@ summary = ''
 for volumename, chapters in volumes.iteritems():
 	os.makedirs(manga+' '+volumename)
 	os.chdir(manga+' '+volumename+'/')
-	incomplete = False
+	chapter_incomplete = True
 	for chapter in chapters:
-		print('Downloading volume '+volumename+', chapter '+chapter[0])
-		p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
-		(out, weboob_output) = p.communicate()
-		if 'Couldn\'t get page' in weboob_output:
-			#retry 1st time
-			print('Error, first retry')
-			shutil.rmtree(manga+' '+volumename+' '+chapter[0])
+		print('Downloading volume '+volumename+', chapter '+chapter[0]+' with Weboob')
+		chapter_incomplete = True
+		# We try to donwload a few times
+		for i in range(int(args.maxretry)+1):
 			p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
 			(out, weboob_output) = p.communicate()
 			if 'Couldn\'t get page' in weboob_output:
-				#retry 2nd time
-				print('Error, second retry')
+				if i < (int(args.maxretry)+1):
+					print('Error, retry nb '+ str(i+1))
+				else:
+					print ('Error, I\'m done retrying :-(')
 				shutil.rmtree(manga+' '+volumename+' '+chapter[0])
-				p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
-				(out, weboob_output) = p.communicate()
-				if 'Couldn\'t get page' in weboob_output:
-					summary = summary + '\nVolume '+volumename+' could not be downloaded'
-					incomplete = True
-					break
-	if incomplete:
+			else:
+				chapter_incomplete = False
+				break
+		if chapter_incomplete:
+			summary = summary + '\nVolume '+volumename+' could not be downloaded'
+			break
+	if chapter_incomplete:
 		continue
 	postProcessImages(volumename)
 	print('Compress in '+manga+' '+volumename+'.cbz')
