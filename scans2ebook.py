@@ -22,7 +22,7 @@ import sys	# for sys.stdout.write
 import random
 
 def postProcessImages(volume):
-	shutil.rmtree(outputdir)
+	shutil.rmtree(outputdir, ignore_errors=True)
 	os.makedirs(outputdir)
 	for root, dirs, files in os.walk('./'):
 		if args.debug:
@@ -166,7 +166,7 @@ for volumename, chapters in volumes.iteritems():
 			p = subprocess.Popen(shlex.split('galleroob download '+chapter[1]), stderr = subprocess.PIPE)
 			(out, weboob_output) = p.communicate()
 			if 'Couldn\'t get page' in weboob_output:
-				if i < (int(args.maxretry)+1):
+				if i < int(args.maxretry):
 					print('Error, retry nb '+ str(i+1))
 				else:
 					print ('Error, I\'m done retrying :-(')
