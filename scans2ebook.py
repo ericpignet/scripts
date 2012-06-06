@@ -8,7 +8,6 @@
 # TODO
 # - make it site-agnostic (would work with set of URLs and ask for volume information)
 # - 2 independant phases: download and processing/packaging
-# - change name of output directory to support parall runs in same directory
 # - use weboob python module => download image by image?
 
 import os
@@ -69,18 +68,25 @@ def postProcessImages(volume):
 					if int(dimensions[0]) > int(dimensions[1].rstrip()):
 						# Landscape => split the image into two images
 						sys.stdout.write(' [split because '+dimensions[0]+'>'+dimensions[1].rstrip()+']')
-						os.system('convert -crop 50%x100% \"'+fullname+'\" \"'+outputdir+'x'+chapter+os.path.splitext(name)[0]+'%d'+os.path.splitext(name)[1]+'\"') 
+						os.system('convert -crop 50%x100% \"'+fullname+'\" \"'
+							+outputdir+'x'+chapter+os.path.splitext(name)[0]+'%d'+os.path.splitext(name)[1]+'\"') 
 
 						if not args.trim:
 							# reverse order
 							sys.stdout.write('\n')
-							os.rename(outputdir+'x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1], outputdir+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1])
-							os.rename(outputdir+'x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1], outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1])
+							os.rename(outputdir+'x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1],
+								outputdir+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1])
+							os.rename(outputdir+'x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1],
+								 outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1])
 						else:
 							# trim the images (and reverse order)
 							sys.stdout.write(' [trim]\n')
-							os.system('convert -trim -fuzz 10% \"'+outputdir+'x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\" \"'+outputdir+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\"')
-							os.system('convert -trim -fuzz 10% \"'+outputdir+'x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\" \"'+outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"'
+								+outputdir+'x'+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\" \"'
+								+outputdir+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"'
+								+outputdir+'x'+chapter+os.path.splitext(name)[0]+'1'+os.path.splitext(name)[1]+'\" \"'
+								+outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 
 						# remove originals
 						os.remove(outputdir+'x'+chapter+os.path.splitext(name)[0] + '0' + os.path.splitext(name)[1])
@@ -90,7 +96,8 @@ def postProcessImages(volume):
 						if args.trim:
 							# Trim the image
 							sys.stdout.write(' [trim]\n')
-							os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"'+outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
+							os.system('convert -trim -fuzz 10% \"'+fullname+'\" \"'
+								+outputdir+chapter+os.path.splitext(name)[0]+'0'+os.path.splitext(name)[1]+'\"')
 				else:
 					if args.trim:
 						sys.stdout.write(' [trim]\n')
@@ -109,13 +116,15 @@ parser = argparse.ArgumentParser(prog='scans2ebook', description='Process manga 
 parser.add_argument('manga', help='name of the manga to download')
 #parser.add_argument('-nd', '--no-download', action='store_true', help='skip the download phase, assumes files are already here')
 #parser.add_argument('-np', '--no-processing', action='store_true', help='skip the processing phase, download scans only')
-parser.add_argument('--from', action='store', dest='volfrom', help='number of first volume to download')
-parser.add_argument('--to', action='store', dest='volto', help='number of last volume to download')
-parser.add_argument('--split', choices=['auto','y','n'], action='store', default='auto', help='split the horizontal images into two vertical images (default: %(default)s)')
-parser.add_argument('--no-trim', action='store_false', dest='trim', help='do\'nt trim white space around pages')
-parser.add_argument('-k', '--keep', action='store_true', help='don\'t remove original downloaded files')
-parser.add_argument('--max-retry', action='store', dest='maxretry', default='3', help='max number of retries in case of download failure (default: %(default)s)')
-parser.add_argument('--debug', action='store_true', help='display debug information')
+parser.add_argument('--from',		action='store',		dest='volfrom', help='number of first volume to download')
+parser.add_argument('--to',		action='store',		dest='volto', help='number of last volume to download')
+parser.add_argument('--split',		action='store',		choices=['auto','y','n'], default='auto',
+								help='split the horizontal images into two vertical images (default: %(default)s)')
+parser.add_argument('--no-trim',	action='store_false',	dest='trim', help='do\'nt trim white space around pages')
+parser.add_argument('-k', '--keep',	action='store_true',	help='don\'t remove original downloaded files')
+parser.add_argument('--max-retry',	action='store',		dest='maxretry', default='4',
+								help='max number of retries in case of download failure (default: %(default)s)')
+parser.add_argument('--debug',		action='store_true',	help='display debug information')
 
 args = parser.parse_args()
 #print args
@@ -146,7 +155,6 @@ for link in soup.find_all('a'):
 if args.debug:
 	print(volumes)
 
-#os.makedirs('../output')
 outputdir = '../output_'+manga+'_'+str(random.randint(0, 99999))+'/'
 
 ################################
