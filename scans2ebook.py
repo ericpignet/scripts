@@ -163,10 +163,16 @@ outputdir = '../output_'+manga+'_'+str(random.randint(0, 99999))+'/'
 
 summary = ''
 for volumename, chapters in volumes.iteritems():
-	os.makedirs(manga+' '+volumename)
+	if os.path.exists(manga+' '+volumename):
+		print('Warning: directory \''+manga+' '+volumename+'\' already exists. I assume that only full chapters are present.')
+	else:
+		os.makedirs(manga+' '+volumename)
 	os.chdir(manga+' '+volumename+'/')
 	chapter_incomplete = True
 	for chapter in chapters:
+		if os.path.exists(manga+' '+volumename+' '+chapter[0]):
+			print('warning: directory \''+manga+' '+volumename+' '+chapter[0]+'\' already exists. I assume chapter is full.')
+			continue
 		print('Downloading volume '+volumename+', chapter '+chapter[0]+' with Weboob')
 		chapter_incomplete = True
 		# We try to donwload a few times
@@ -186,6 +192,9 @@ for volumename, chapters in volumes.iteritems():
 			summary = summary + '\nVolume '+volumename+' could not be downloaded'
 			break
 	if chapter_incomplete:
+		if not args.keep:
+			os.chdir('..')
+			shutil.rmtree(manga+' '+volumename)
 		continue
 	postProcessImages(volumename)
 	print('Compress in '+manga+' '+volumename+'.cbz')
